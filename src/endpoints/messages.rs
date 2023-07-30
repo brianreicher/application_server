@@ -19,8 +19,8 @@ pub struct HandleForgotTokenResponse {
 }
 #[derive(Serialize, Deserialize)]
 
-pub struct GetChallengeString {
-    pub challenge_string: String,
+pub struct GetChallengeStrings {
+    pub challenge_strings: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]

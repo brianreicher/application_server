@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use warp::reject;
 
@@ -9,7 +7,7 @@ use crate::model::types::Applicant;
 pub enum ApiError {
     DuplicateUser,
     IncorrectSolution {
-        given_solution: HashMap<String, u64>,
+        given_solution: Vec<bool>,
     },
     DeserializeError,
     ApplicantsNotFound {
@@ -22,9 +20,7 @@ pub enum ApiError {
 #[derive(thiserror::Error, Debug, Serialize, Deserialize)]
 pub enum ModelError {
     #[error("Incorrect solution")]
-    IncorrectSolution {
-        given_solution: HashMap<String, u64>,
-    },
+    IncorrectSolution { given_solution: Vec<bool> },
     #[error("A registration with this NUID exists")]
     DuplicateUser,
     #[error("One or more of the applicants requested not found")]

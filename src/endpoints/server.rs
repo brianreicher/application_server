@@ -1,12 +1,12 @@
-use std::collections::HashMap;
 use std::convert::Infallible;
 
 use super::errors::ModelError;
 use super::messages::{
-    ErrorResponse, GetChallengeString, HandleForgotTokenResponse, RegisterRequest, RegisterResponse,
+    ErrorResponse, GetChallengeStrings, HandleForgotTokenResponse, RegisterRequest,
+    RegisterResponse,
 };
 use super::routes::{
-    forgot_token_route, get_applicant_route, get_applicants_route, get_challenge_string_route,
+    forgot_token_route, get_applicant_route, get_applicants_route, get_challenge_strings_route,
     health, register_route, submit, with_db,
 };
 use crate::endpoints::ApiError;
@@ -56,7 +56,7 @@ pub fn end(o: Option<PgPool>) -> impl Filter<Extract = impl Reply, Error = Infal
         .or(handle_with_db!(forgot_token_route, o, handle_forgot_token))
         .or(handle_with_db!(submit, o, handle_submit))
         .or(handle_with_db!(
-            get_challenge_string_route,
+            get_challenge_strings_route,
             o,
             handle_get_challenge
         ))
@@ -158,7 +158,7 @@ pub async fn handle_register(request: RegisterRequest, p: PgPool) -> Result<impl
 // On error, send back a 400
 pub async fn handle_submit(
     token: Uuid,
-    soln: HashMap<String, u64>,
+    soln: Vec<bool>,
     p: PgPool,
 ) -> Result<impl Reply, Rejection> {
     info!(
@@ -205,9 +205,9 @@ pub async fn health_check() -> Result<impl Reply, Rejection> {
 pub async fn handle_get_challenge(token: Uuid, pool: PgPool) -> Result<impl Reply, Rejection> {
     info!("Fetching challenge string for user with token: {}", token);
     match retreive_challenge(&pool, token).await {
-        Ok(challenge_string) => {
-            info!("Challenge string: {}", challenge_string);
-            Ok(reply::json(&GetChallengeString { challenge_string }))
+        Ok(challenge_strings) => {
+            info!("Challenge strings: {:?}", challenge_strings);
+            Ok(reply::json(&GetChallengeStrings { challenge_strings }))
         }
         Err(e) => {
             error!("Fetching challenge_string failed {:?}", e);

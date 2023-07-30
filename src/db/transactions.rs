@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use core::panic;
 use serde_json;
-use std::collections::HashMap;
 use std::time::SystemTime;
 use uuid::Uuid;
 
@@ -12,24 +11,28 @@ pub async fn register_user_db(
     token: Uuid,
     name: String,
     nuid: String,
-    challenge_string: &String,
-    solution: HashMap<String, u64>,
+    challenge_strings: &Vec<String>,
+    solution: Vec<bool>,
 ) -> Result<(), sqlx::Error> {
     // Insert the applicant
     let registration_time: DateTime<Utc> = SystemTime::now().into();
+    let ser_challenge_strings = match serde_json::to_value(&challenge_strings) {
+        Ok(val) => val,
+        Err(_) => todo!("Figure out how to handle the serde error properly"),
+    };
     let ser_solution = match serde_json::to_value(&solution) {
         Ok(val) => val,
         Err(_) => todo!("Figure out how to handle the serde error properly"),
     };
 
     query!(
-        r#"INSERT INTO applicants (nuid, applicant_name, registration_time, token, challenge_string, solution)
+        r#"INSERT INTO applicants (nuid, applicant_name, registration_time, token, challenge_strings, solution)
          VALUES ($1, $2, $3, $4, $5, $6);"#,
         nuid,
         name,
         registration_time,
         token,
-        challenge_string,
+        ser_challenge_strings,
         ser_solution
     )
     .execute(pool)
@@ -74,21 +77,23 @@ pub async fn retreive_token_db(pool: &PgPool, nuid: &String) -> Result<Uuid, sql
     Ok(record.token)
 }
 
-pub async fn retreive_challenge_db(pool: &PgPool, token: Uuid) -> Result<String, sqlx::Error> {
+pub async fn retreive_challenge_db(pool: &PgPool, token: Uuid) -> Result<Vec<String>, sqlx::Error> {
     let record = query!(
-        r#"select challenge_string from applicants where token=$1"#,
+        r#"SELECT challenge_strings FROM applicants where token=$1"#,
         token
     )
     .fetch_one(pool)
     .await?;
 
-    Ok(record.challenge_string)
+    match serde_json::from_value(record.challenge_strings) {
+        Ok(challenge_strings) => Ok(challenge_strings),
+        Err(_e) => {
+            panic!("challenge strings didn't deserialize properly - this should never happen")
+        }
+    }
 }
 
-pub async fn retreive_soln(
-    pool: &PgPool,
-    token: Uuid,
-) -> Result<(HashMap<String, u64>, String), sqlx::Error> {
+pub async fn retreive_soln(pool: &PgPool, token: Uuid) -> Result<(Vec<bool>, String), sqlx::Error> {
     let record = query!(
         r#"SELECT nuid, solution FROM applicants WHERE token=$1"#,
         token

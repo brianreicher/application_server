@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use rand::{
     seq::{IteratorRandom, SliceRandom},
     Rng,
@@ -47,13 +45,26 @@ pub async fn register_user(
     pool: PgPool,
     name: String,
     nuid: String,
-) -> Result<(Uuid, String), ModelError> {
+) -> Result<(Uuid, Vec<String>), ModelError> {
     let token = Uuid::new_v4();
-    let challenge_str = generate_challenge_string();
-    let soln = find_kmers(&challenge_str, 3);
+    let (challenge_strings, solution) = generate_challenge(
+        &nuid,
+        100,
+        vec![
+            String::from(""),
+            Color::Red.to_string(),
+            Color::Orange.to_string(),
+            Color::Yellow.to_string(),
+            Color::Green.to_string(),
+            Color::Blue.to_string(),
+            Color::Violet.to_string(),
+        ],
+    );
 
-    match db::transactions::register_user_db(&pool, token, name, nuid, &challenge_str, soln).await {
-        Ok(()) => Ok((token, challenge_str)),
+    match db::transactions::register_user_db(&pool, token, name, nuid, &challenge_strings, solution)
+        .await
+    {
+        Ok(()) => Ok((token, challenge_strings)),
         // there's a bunch of different ways that this can fail, I should probably
         // handle the error -
         Err(_e) => Err(ModelError::DuplicateUser),
@@ -67,7 +78,7 @@ pub async fn retreive_token(pool: PgPool, nuid: &String) -> Result<Uuid, ModelEr
     }
 }
 
-pub async fn retreive_challenge(pool: &PgPool, token: Uuid) -> Result<String, ModelError> {
+pub async fn retreive_challenge(pool: &PgPool, token: Uuid) -> Result<Vec<String>, ModelError> {
     match db::transactions::retreive_challenge_db(pool, token).await {
         Ok(challenge) => Ok(challenge),
         Err(_) => Err(ModelError::NoUserFound),
@@ -77,7 +88,7 @@ pub async fn retreive_challenge(pool: &PgPool, token: Uuid) -> Result<String, Mo
 pub async fn check_solution(
     pool: PgPool,
     token: Uuid,
-    given_soln: &HashMap<String, u64>,
+    given_soln: &Vec<bool>,
 ) -> Result<bool, ModelError> {
     // Check if the solution is correct - write the row to the solutions table
     match db::transactions::retreive_soln(&pool, token).await {
@@ -92,26 +103,6 @@ pub async fn check_solution(
     }
 }
 
-fn generate_challenge_string() -> String {
-    let charset = "ACTG";
-    random_string::generate(100, charset)
-}
-
-// Return the kmers as a map from strings of length k to
-fn find_kmers(challenge_str: &String, k: usize) -> HashMap<String, u64> {
-    let mut start_ind = 0;
-    let mut soln: HashMap<String, u64> = HashMap::new();
-    while start_ind + k <= challenge_str.len() {
-        let slice = &challenge_str[start_ind..start_ind + k];
-        soln.entry(slice.to_string())
-            .and_modify(|kmer_count| *kmer_count += 1)
-            .or_insert(1);
-        start_ind += 1;
-    }
-
-    soln
-}
-
 #[derive(EnumIter, Debug)]
 enum EditType {
     Insertion,
@@ -120,7 +111,7 @@ enum EditType {
 }
 
 fn generate_challenge(
-    nuid: String,
+    nuid: &str,
     n_random: usize,
     mandatory_cases: Vec<String>,
 ) -> (Vec<String>, Vec<bool>) {
@@ -238,7 +229,7 @@ mod tests {
         let n_mandatory = mandatory_cases.len();
         let n_random = 10;
         let (cases, answers) =
-            generate_challenge(String::from("001234567"), n_random, mandatory_cases);
+            generate_challenge(&String::from("001234567"), n_random, mandatory_cases);
 
         assert_eq!(cases.len(), n_mandatory + n_random);
         assert_eq!(answers.len(), n_mandatory + n_random);
