@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS applicants (
     registration_time timestamp with time zone NOT NULL,
     token uuid UNIQUE NOT NULL,
     challenge_string varchar NOT NULL,
-    solution json NOT NULL
+    solution json NOT NULL,
+    backend_q1_solution json NOT NULL,
+    backend_q2_solution json NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS submissions (
@@ -18,20 +20,3 @@ CREATE TABLE IF NOT EXISTS submissions (
     submission_time timestamp with time zone NOT NULL
 );
 
-
-/*
- Right now this could be part of the applicants table
- I'm keeping it separate to eventually enable giving back new challenge
- string at each get_challenge string req
- Eventually get_challenge_string will generate its own challenge string, 
- write it to the db with a token, then we'll look up and verify solutions
- with the token
- */
-/*
-CREATE TABLE problems (
- solution_id serial PRIMARY KEY,
- challenge_string varchar NOT NULL,
- solution json NOT NULL,
- token uuid NOT NULL REFERENCES applicants (token)
-);
- */
