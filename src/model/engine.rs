@@ -65,7 +65,7 @@ pub async fn retreive_challenge(pool: &PgPool, token: Uuid) -> Result<String, Mo
     }
 }
 
-pub async fn check_solution(
+pub async fn check_solution( #TODO: update with new algorithm
     pool: PgPool,
     token: Uuid,
     given_soln: &HashMap<String, u64>,
@@ -82,6 +82,43 @@ pub async fn check_solution(
         Err(_) => Err(ModelError::NoUserFound),
     }
 }
+
+pub async fn check_solution_backend_q1(
+    pool: PgPool,
+    token: Uuid,
+    given_soln: &HashMap<String, u64>,
+) -> Result<bool, ModelError> {
+    // Check if the solution is correct - write the row to the solutions table
+    match db::transactions::retreive_soln_bq1(&pool, token).await {
+        Ok((soln, nuid)) => {
+            let ok = soln == *given_soln;
+            if let Err(_e) = db::transactions::write_submission(pool, nuid, ok).await {
+                return Err(ModelError::SqlError);
+            }
+            Ok(ok)
+        }
+        Err(_) => Err(ModelError::NoUserFound),
+    }
+}
+
+pub async fn check_solution_backend_q2(
+    pool: PgPool,
+    token: Uuid,
+    given_soln: &HashMap<String, String>,
+) -> Result<bool, ModelError> {
+    // Check if the solution is correct - write the row to the solutions table
+    match db::transactions::retreive_soln_bq2(&pool, token).await {
+        Ok((soln, nuid)) => {
+            let ok = soln == *given_soln;
+            if let Err(_e) = db::transactions::write_submission(pool, nuid, ok).await {
+                return Err(ModelError::SqlError);
+            }
+            Ok(ok)
+        }
+        Err(_) => Err(ModelError::NoUserFound),
+    }
+}
+
 
 fn generate_challenge_string() -> String {
     let charset = "ACTG";
