@@ -143,9 +143,9 @@ pub async fn handle_register(request: RegisterRequest, p: PgPool) -> Result<impl
     );
 
     match register_user(p, request.name, request.nuid).await {
-        Ok((token, challenge_string)) => Ok(reply::json(&RegisterResponse {
+        Ok((token, challenge_strings)) => Ok(reply::json(&RegisterResponse {
             token: token.to_string(),
-            challenge_string,
+            challenge_strings,
         })),
         // Should be a 409 conflict error if the error doesnt exist,
         Err(e) => {

@@ -5,7 +5,7 @@ use super::errors;
 #[derive(Serialize, Deserialize)]
 pub struct RegisterResponse {
     pub token: String,
-    pub challenge_string: String,
+    pub challenge_strings: Vec<String>,
 }
 #[derive(Serialize, Deserialize)]
 pub struct RegisterRequest {
