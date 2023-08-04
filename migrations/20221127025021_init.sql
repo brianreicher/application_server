@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS applicants (
     registration_time timestamp with time zone NOT NULL,
     token uuid UNIQUE NOT NULL,
     challenge_string text[] NOT NULL,
-    solution text[] NOT NULL
+    solution text[] NOT NULL,
+    backend_q1_solution json NOT NULL,
+    backend_q2_solution json NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS submissions (
