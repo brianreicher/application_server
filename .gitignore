@@ -3,3 +3,4 @@ client/venv
 .cargo/
 .DS_Store
 /*.env
+.mypy_cache/
