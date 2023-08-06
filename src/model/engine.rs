@@ -1,5 +1,7 @@
-use std::collections::HashMap;
-
+use rand::{
+    seq::{IteratorRandom, SliceRandom},
+    Rng,
+};
 use sqlx::PgPool;
 
 use uuid::Uuid;
@@ -9,7 +11,12 @@ use crate::{
     endpoints::errors::ModelError,
 };
 
-use super::types::Applicant;
+use super::types::{Applicant, Color};
+
+use strum::{EnumIter, IntoEnumIterator};
+
+use rand_pcg::Pcg64;
+use rand_seeder::Seeder;
 
 pub async fn get_applicants(
     pool: PgPool,
@@ -38,13 +45,26 @@ pub async fn register_user(
     pool: PgPool,
     name: String,
     nuid: String,
-) -> Result<(Uuid, String), ModelError> {
+) -> Result<(Uuid, Vec<String>), ModelError> {
     let token = Uuid::new_v4();
-    let challenge_str = generate_challenge_string();
-    let soln = find_kmers(&challenge_str, 3);
+    let (challenge_strings, solution) = generate_challenge(
+        &nuid,
+        100,
+        vec![
+            String::from(""),
+            Color::Red.to_string(),
+            Color::Orange.to_string(),
+            Color::Yellow.to_string(),
+            Color::Green.to_string(),
+            Color::Blue.to_string(),
+            Color::Violet.to_string(),
+        ],
+    );
 
-    match db::transactions::register_user_db(&pool, token, name, nuid, &challenge_str, soln).await {
-        Ok(()) => Ok((token, challenge_str)),
+    match db::transactions::register_user_db(&pool, token, name, nuid, &challenge_strings, solution)
+        .await
+    {
+        Ok(()) => Ok((token, challenge_strings)),
         // there's a bunch of different ways that this can fail, I should probably
         // handle the error -
         Err(_e) => Err(ModelError::DuplicateUser),
@@ -58,17 +78,17 @@ pub async fn retreive_token(pool: PgPool, nuid: &String) -> Result<Uuid, ModelEr
     }
 }
 
-pub async fn retreive_challenge(pool: &PgPool, token: Uuid) -> Result<String, ModelError> {
+pub async fn retreive_challenge(pool: &PgPool, token: Uuid) -> Result<Vec<String>, ModelError> {
     match db::transactions::retreive_challenge_db(pool, token).await {
         Ok(challenge) => Ok(challenge),
         Err(_) => Err(ModelError::NoUserFound),
     }
 }
 
-pub async fn check_solution( #TODO: update with new algorithm
+pub async fn check_solution(
     pool: PgPool,
     token: Uuid,
-    given_soln: &HashMap<String, u64>,
+    given_soln: &Vec<String>,
 ) -> Result<bool, ModelError> {
     // Check if the solution is correct - write the row to the solutions table
     match db::transactions::retreive_soln(&pool, token).await {
@@ -83,125 +103,149 @@ pub async fn check_solution( #TODO: update with new algorithm
     }
 }
 
-pub async fn check_solution_backend_q1(
-    pool: PgPool,
-    token: Uuid,
-    given_soln: &HashMap<String, u64>,
-) -> Result<bool, ModelError> {
-    // Check if the solution is correct - write the row to the solutions table
-    match db::transactions::retreive_soln_bq1(&pool, token).await {
-        Ok((soln, nuid)) => {
-            let ok = soln == *given_soln;
-            if let Err(_e) = db::transactions::write_submission(pool, nuid, ok).await {
-                return Err(ModelError::SqlError);
+#[derive(EnumIter, Debug)]
+enum EditType {
+    Insertion,
+    Deletion,
+    Substitution,
+}
+
+fn generate_challenge(
+    nuid: &str,
+    n_random: usize,
+    mandatory_cases: Vec<String>,
+) -> (Vec<String>, Vec<String>) {
+    let mut rng: Pcg64 = Seeder::from(nuid).make_rng();
+    let random_cases: Vec<String> = (0..n_random)
+        .map(|_| {
+            let color = Color::iter().choose(&mut rng).unwrap().to_string();
+            let len = color.len();
+            let random_count = rng.gen_range(0..=len);
+            if random_count == 0 {
+                return color;
             }
-            Ok(ok)
-        }
-        Err(_) => Err(ModelError::NoUserFound),
-    }
-}
+            match EditType::iter().choose(&mut rng).unwrap() {
+                EditType::Deletion => color.chars().skip(random_count).collect(),
+                EditType::Insertion => {
+                    let alphabet: Vec<char> = ('a'..='z').collect();
+                    let mut color_chars: Vec<char> = color.chars().collect();
+                    let random_chars = alphabet
+                        .choose_multiple(&mut rng, random_count)
+                        .cloned()
+                        .collect::<Vec<char>>();
+                    let random_indices = (0..random_count)
+                        .map(|_| rng.gen_range(0..=color_chars.len()))
+                        .collect::<Vec<usize>>();
+                    for (index, random_char) in random_indices.into_iter().zip(random_chars) {
+                        color_chars.insert(index, random_char);
+                    }
+                    color_chars.into_iter().collect()
+                }
+                EditType::Substitution => {
+                    let changed_indices: Vec<_> =
+                        (0..random_count).map(|_| rng.gen_range(0..len)).collect();
+                    let alphabet: Vec<char> = ('a'..='z').collect();
+                    let mut color_chars: Vec<char> = color.chars().collect();
 
-pub async fn check_solution_backend_q2(
-    pool: PgPool,
-    token: Uuid,
-    given_soln: &HashMap<String, String>,
-) -> Result<bool, ModelError> {
-    // Check if the solution is correct - write the row to the solutions table
-    match db::transactions::retreive_soln_bq2(&pool, token).await {
-        Ok((soln, nuid)) => {
-            let ok = soln == *given_soln;
-            if let Err(_e) = db::transactions::write_submission(pool, nuid, ok).await {
-                return Err(ModelError::SqlError);
+                    for index in changed_indices {
+                        let original_char = color_chars[index];
+                        let mut new_char;
+                        loop {
+                            new_char = *alphabet.choose(&mut rng).unwrap();
+                            if new_char != original_char {
+                                break;
+                            }
+                        }
+                        color_chars[index] = new_char;
+                    }
+                    color_chars.into_iter().collect()
+                }
             }
-            Ok(ok)
+        })
+        .collect();
+
+    let mut all_cases = mandatory_cases;
+    all_cases.extend(random_cases);
+
+    let answers: Vec<String> = all_cases
+        .iter()
+        .filter(|case| one_edit_away(case))
+        .cloned()
+        .collect();
+
+    (all_cases, answers)
+}
+
+fn n_edits_away(str1: &str, str2: &str, n: isize) -> bool {
+    if (str1.len() as isize - str2.len() as isize).abs() > n {
+        return false;
+    }
+
+    let (shorter, longer) = if str1.len() > str2.len() {
+        (str2, str1)
+    } else {
+        (str1, str2)
+    };
+
+    let mut short_pointer = 0;
+    let mut long_pointer = 0;
+    let mut edit_count = 0;
+
+    while short_pointer < shorter.len() && long_pointer < longer.len() {
+        if shorter.chars().nth(short_pointer) != longer.chars().nth(long_pointer) {
+            edit_count += 1;
+            if edit_count > n {
+                return false;
+            }
+            if shorter.len() == longer.len() {
+                short_pointer += 1;
+            }
+        } else {
+            short_pointer += 1;
         }
-        Err(_) => Err(ModelError::NoUserFound),
+        long_pointer += 1;
     }
+    edit_count <= n
 }
 
-
-fn generate_challenge_string() -> String {
-    let charset = "ACTG";
-    random_string::generate(100, charset)
-}
-
-// Return the kmers as a map from strings of length k to
-fn find_kmers(challenge_str: &String, k: usize) -> HashMap<String, u64> {
-    let mut start_ind = 0;
-    let mut soln: HashMap<String, u64> = HashMap::new();
-    while start_ind + k <= challenge_str.len() {
-        let slice = &challenge_str[start_ind..start_ind + k];
-        soln.entry(slice.to_string())
-            .and_modify(|kmer_count| *kmer_count += 1)
-            .or_insert(1);
-        start_ind += 1;
-    }
-
-    soln
+fn one_edit_away(str: &str) -> bool {
+    Color::iter().any(|color| n_edits_away(str, color.to_string().as_str(), 1))
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io::Error;
 
-    use super::find_kmers;
-    use super::generate_challenge_string;
+    use super::generate_challenge;
+    use super::one_edit_away;
+    use super::Color;
 
     #[test]
-    fn test_rand_str() -> Result<(), Error> {
-        assert!(generate_challenge_string().len() == 100);
-        Ok(())
+    fn test_generate_challenge() {
+        let mandatory_cases: Vec<String> = vec![
+            String::from(""),
+            Color::Red.to_string(),
+            Color::Orange.to_string(),
+            Color::Yellow.to_string(),
+            Color::Green.to_string(),
+            Color::Blue.to_string(),
+            Color::Violet.to_string(),
+        ];
+        let n_mandatory = mandatory_cases.len();
+        let n_random = 10;
+        let (cases, answers) =
+            generate_challenge(&String::from("001234567"), n_random, mandatory_cases);
+
+        assert_eq!(cases.len(), n_mandatory + n_random);
+
+        assert!(answers.iter().all(|answer| one_edit_away(answer)));
     }
 
     #[test]
-    fn test_empty_challenge_string() -> Result<(), Error> {
-        let empty_challenge_string = &String::from("");
-        let empty_soln = find_kmers(empty_challenge_string, 3);
-        assert!(empty_soln.is_empty());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_challenge_string_too_small() -> Result<(), Error> {
-        let small_challenge_string = &String::from("ab");
-        let empty_soln = find_kmers(small_challenge_string, 3);
-        assert!(empty_soln.is_empty());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_long_challenge_string() -> Result<(), Error> {
-        #[macro_export]
-        macro_rules! fuck_your_strings {
-            ($(($key:expr, $value: expr),)+) => {
-                {
-                    let mut map = std::collections::HashMap::new();
-                    $(
-                        map.insert(String::from($key), $value);
-                    )*
-                    map
-                }
-            };
-        }
-
-        let long_challenge_string = &String::from("aabbceedeaab");
-
-        let soln = find_kmers(long_challenge_string, 3);
-        let correct_soln = fuck_your_strings!(
-            ("aab", 2),
-            ("abb", 1),
-            ("bbc", 1),
-            ("bce", 1),
-            ("cee", 1),
-            ("eed", 1),
-            ("ede", 1),
-            ("dea", 1),
-            ("eaa", 1),
-        );
-
-        assert_eq!(soln, correct_soln);
-        Ok(())
+    fn test_one_edit_away_example() {
+        assert!(one_edit_away("red"));
+        assert!(one_edit_away("lue"));
+        assert!(!one_edit_away("ooran"));
+        assert!(!one_edit_away("abc"));
+        assert!(one_edit_away("greene"));
     }
 }

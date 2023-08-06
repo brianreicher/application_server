@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use sqlx::PgPool;
 use uuid::Uuid;
 use warp::filters::BoxedFilter;
@@ -23,12 +21,12 @@ pub fn health() -> BoxedFilter<()> {
     warp::get().and(health).boxed()
 }
 
-pub fn submit() -> BoxedFilter<(Uuid, HashMap<String, u64>)> {
+pub fn submit() -> BoxedFilter<(Uuid, Vec<String>)> {
     let route = warp::path!("submit" / Uuid);
     warp::post().and(route).and(warp::body::json()).boxed()
 }
 
-pub fn get_challenge_string_route() -> BoxedFilter<(Uuid,)> {
+pub fn get_challenge_route() -> BoxedFilter<(Uuid,)> {
     let route = warp::path!("challenge" / Uuid);
 
     warp::get().and(route).boxed()

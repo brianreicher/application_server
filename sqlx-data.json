@@ -5,14 +5,7 @@
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Uuid",
-          "Varchar",
-          "Json"
-        ]
+        "Left": ["Varchar", "Varchar", "Timestamptz", "Uuid", "Varchar", "Json"]
       }
     },
     "query": "INSERT INTO applicants (nuid, applicant_name, registration_time, token, challenge_string, solution)\n         VALUES ($1, $2, $3, $4, $5, $6);"
@@ -22,11 +15,7 @@
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Left": [
-          "Varchar",
-          "Bool",
-          "Timestamptz"
-        ]
+        "Left": ["Varchar", "Bool", "Timestamptz"]
       }
     },
     "query": "INSERT INTO submissions (nuid, ok, submission_time) VALUES ($1, $2, $3);"
@@ -40,13 +29,9 @@
           "type_info": "Varchar"
         }
       ],
-      "nullable": [
-        false
-      ],
+      "nullable": [false],
       "parameters": {
-        "Left": [
-          "Uuid"
-        ]
+        "Left": ["Uuid"]
       }
     },
     "query": "select challenge_string from applicants where token=$1"
@@ -60,13 +45,9 @@
           "type_info": "Uuid"
         }
       ],
-      "nullable": [
-        false
-      ],
+      "nullable": [false],
       "parameters": {
-        "Left": [
-          "Text"
-        ]
+        "Left": ["Text"]
       }
     },
     "query": "SELECT token FROM applicants WHERE nuid=$1"
@@ -85,14 +66,9 @@
           "type_info": "Json"
         }
       ],
-      "nullable": [
-        false,
-        false
-      ],
+      "nullable": [false, false],
       "parameters": {
-        "Left": [
-          "Uuid"
-        ]
+        "Left": ["Uuid"]
       }
     },
     "query": "SELECT nuid, solution FROM applicants WHERE token=$1"
@@ -126,17 +102,9 @@
           "type_info": "Timestamptz"
         }
       ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
+      "nullable": [false, false, false, false, false],
       "parameters": {
-        "Left": [
-          "TextArray"
-        ]
+        "Left": ["TextArray"]
       }
     },
     "query": "SELECT DISTINCT ON (nuid) nuid, applicant_name, ok, submission_time, \n        registration_time FROM submissions JOIN applicants using(nuid) where \n        nuid=ANY($1) ORDER BY nuid, submission_time DESC;"

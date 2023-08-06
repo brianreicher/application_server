@@ -5,7 +5,7 @@ use super::errors;
 #[derive(Serialize, Deserialize)]
 pub struct RegisterResponse {
     pub token: String,
-    pub challenge_string: String,
+    pub challenge: Vec<String>,
 }
 #[derive(Serialize, Deserialize)]
 pub struct RegisterRequest {
@@ -19,8 +19,8 @@ pub struct HandleForgotTokenResponse {
 }
 #[derive(Serialize, Deserialize)]
 
-pub struct GetChallengeString {
-    pub challenge_string: String,
+pub struct GetChallenge {
+    pub challenge: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]

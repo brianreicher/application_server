@@ -36,7 +36,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
             configuration_directory.join("base.yaml"),
         ))
         .add_source(config::File::from(
-            configuration_directory.join(&environment_filename),
+            configuration_directory.join(environment_filename),
         ))
         .add_source(config::Environment::default().separator("_"))
         .build()?;
@@ -104,7 +104,7 @@ impl Settings {
 }
 
 #[test]
-fn test_parse_int() {
+fn test_config() {
     use config::{Config, Environment};
     use std::path::PathBuf;
 
