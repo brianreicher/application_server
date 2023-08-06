@@ -26,7 +26,7 @@ pub fn submit() -> BoxedFilter<(Uuid, Vec<bool>)> {
     warp::post().and(route).and(warp::body::json()).boxed()
 }
 
-pub fn get_challenge_strings_route() -> BoxedFilter<(Uuid,)> {
+pub fn get_challenge_route() -> BoxedFilter<(Uuid,)> {
     let route = warp::path!("challenge" / Uuid);
 
     warp::get().and(route).boxed()

@@ -2,12 +2,11 @@ use std::convert::Infallible;
 
 use super::errors::ModelError;
 use super::messages::{
-    ErrorResponse, GetChallengeStrings, HandleForgotTokenResponse, RegisterRequest,
-    RegisterResponse,
+    ErrorResponse, GetChallenge, HandleForgotTokenResponse, RegisterRequest, RegisterResponse,
 };
 use super::routes::{
-    forgot_token_route, get_applicant_route, get_applicants_route, get_challenge_strings_route,
-    health, register_route, submit, with_db,
+    forgot_token_route, get_applicant_route, get_applicants_route, get_challenge_route, health,
+    register_route, submit, with_db,
 };
 use crate::endpoints::ApiError;
 use crate::model::{
@@ -56,7 +55,7 @@ pub fn end(o: Option<PgPool>) -> impl Filter<Extract = impl Reply, Error = Infal
         .or(handle_with_db!(forgot_token_route, o, handle_forgot_token))
         .or(handle_with_db!(submit, o, handle_submit))
         .or(handle_with_db!(
-            get_challenge_strings_route,
+            get_challenge_route,
             o,
             handle_get_challenge
         ))
@@ -143,9 +142,9 @@ pub async fn handle_register(request: RegisterRequest, p: PgPool) -> Result<impl
     );
 
     match register_user(p, request.name, request.nuid).await {
-        Ok((token, challenge_strings)) => Ok(reply::json(&RegisterResponse {
+        Ok((token, challenge)) => Ok(reply::json(&RegisterResponse {
             token: token.to_string(),
-            challenge_strings,
+            challenge,
         })),
         // Should be a 409 conflict error if the error doesnt exist,
         Err(e) => {
@@ -205,9 +204,9 @@ pub async fn health_check() -> Result<impl Reply, Rejection> {
 pub async fn handle_get_challenge(token: Uuid, pool: PgPool) -> Result<impl Reply, Rejection> {
     info!("Fetching challenge string for user with token: {}", token);
     match retreive_challenge(&pool, token).await {
-        Ok(challenge_strings) => {
-            info!("Challenge strings: {:?}", challenge_strings);
-            Ok(reply::json(&GetChallengeStrings { challenge_strings }))
+        Ok(challenge) => {
+            info!("Challenge strings: {:?}", challenge);
+            Ok(reply::json(&GetChallenge { challenge }))
         }
         Err(e) => {
             error!("Fetching challenge_string failed {:?}", e);
