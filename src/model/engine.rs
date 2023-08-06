@@ -169,10 +169,8 @@ fn generate_challenge(
 
     let answers: Vec<String> = all_cases
         .iter()
-        .map(|case| one_edit_away(case))
-        .zip(all_cases.iter())
-        .filter(|(answer, _case)| *answer)
-        .map(|(_answer, case)| case.clone())
+        .filter(|case| one_edit_away(case))
+        .cloned()
         .collect();
 
     (all_cases, answers)
