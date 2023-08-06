@@ -88,7 +88,7 @@ pub async fn retreive_challenge(pool: &PgPool, token: Uuid) -> Result<Vec<String
 pub async fn check_solution(
     pool: PgPool,
     token: Uuid,
-    given_soln: &Vec<bool>,
+    given_soln: &Vec<String>,
 ) -> Result<bool, ModelError> {
     // Check if the solution is correct - write the row to the solutions table
     match db::transactions::retreive_soln(&pool, token).await {
@@ -114,7 +114,7 @@ fn generate_challenge(
     nuid: &str,
     n_random: usize,
     mandatory_cases: Vec<String>,
-) -> (Vec<String>, Vec<bool>) {
+) -> (Vec<String>, Vec<String>) {
     let mut rng: Pcg64 = Seeder::from(nuid).make_rng();
     let random_cases: Vec<String> = (0..n_random)
         .map(|_| {
@@ -167,7 +167,13 @@ fn generate_challenge(
     let mut all_cases = mandatory_cases;
     all_cases.extend(random_cases);
 
-    let answers: Vec<bool> = all_cases.iter().map(|case| one_edit_away(case)).collect();
+    let answers: Vec<String> = all_cases
+        .iter()
+        .map(|case| one_edit_away(case))
+        .zip(all_cases.iter())
+        .filter(|(answer, _case)| *answer)
+        .map(|(_answer, case)| case.clone())
+        .collect();
 
     (all_cases, answers)
 }
@@ -232,12 +238,8 @@ mod tests {
             generate_challenge(&String::from("001234567"), n_random, mandatory_cases);
 
         assert_eq!(cases.len(), n_mandatory + n_random);
-        assert_eq!(answers.len(), n_mandatory + n_random);
 
-        assert!(cases
-            .into_iter()
-            .zip(answers.into_iter())
-            .all(|(case, answer)| one_edit_away(case.as_str()) == answer));
+        assert!(answers.iter().all(|answer| one_edit_away(answer)));
     }
 
     #[test]

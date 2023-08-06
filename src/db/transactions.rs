@@ -12,7 +12,7 @@ pub async fn register_user_db(
     name: String,
     nuid: String,
     challenge: &Vec<String>,
-    solution: Vec<bool>,
+    solution: Vec<String>,
 ) -> Result<(), sqlx::Error> {
     let registration_time: DateTime<Utc> = SystemTime::now().into();
     let ser_challenge = match serde_json::to_value(challenge) {
@@ -89,7 +89,10 @@ pub async fn retreive_challenge_db(pool: &PgPool, token: Uuid) -> Result<Vec<Str
     }
 }
 
-pub async fn retreive_soln(pool: &PgPool, token: Uuid) -> Result<(Vec<bool>, String), sqlx::Error> {
+pub async fn retreive_soln(
+    pool: &PgPool,
+    token: Uuid,
+) -> Result<(Vec<String>, String), sqlx::Error> {
     let record = query!(
         r#"SELECT nuid, solution FROM applicants WHERE token=$1"#,
         token

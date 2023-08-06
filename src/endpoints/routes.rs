@@ -21,7 +21,7 @@ pub fn health() -> BoxedFilter<()> {
     warp::get().and(health).boxed()
 }
 
-pub fn submit() -> BoxedFilter<(Uuid, Vec<bool>)> {
+pub fn submit() -> BoxedFilter<(Uuid, Vec<String>)> {
     let route = warp::path!("submit" / Uuid);
     warp::post().and(route).and(warp::body::json()).boxed()
 }

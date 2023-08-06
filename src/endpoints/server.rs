@@ -157,7 +157,7 @@ pub async fn handle_register(request: RegisterRequest, p: PgPool) -> Result<impl
 // On error, send back a 400
 pub async fn handle_submit(
     token: Uuid,
-    soln: Vec<bool>,
+    soln: Vec<String>,
     p: PgPool,
 ) -> Result<impl Reply, Rejection> {
     info!(
