@@ -1,4 +1,3 @@
--- Add migration script here
 CREATE TABLE IF NOT EXISTS applicants (
     nuid varchar PRIMARY KEY,
     applicant_name varchar NOT NULL,

@@ -4,7 +4,7 @@ use serde_json;
 use std::time::SystemTime;
 use uuid::Uuid;
 
-use sqlx::{query, PgPool};
+use sqlx::{PgPool, query};
 
 pub async fn register_user_db(
     pool: &PgPool,

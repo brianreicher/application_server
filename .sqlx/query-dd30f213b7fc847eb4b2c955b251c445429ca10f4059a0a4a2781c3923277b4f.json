@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (nuid) nuid, applicant_name, ok, submission_time, \n        registration_time FROM submissions JOIN applicants using(nuid) where \n        nuid=ANY($1) ORDER BY nuid, submission_time DESC;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "nuid",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "applicant_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "ok",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "submission_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "registration_time",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "dd30f213b7fc847eb4b2c955b251c445429ca10f4059a0a4a2781c3923277b4f"
+}

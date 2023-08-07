@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO applicants (nuid, applicant_name, registration_time, token, challenge, solution)\n        VALUES ($1, $2, $3, $4, $5, $6);",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Uuid",
+        "Json",
+        "Json"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8aa50c3e73565ef0797b0b983272d44d26c3bc5a82dc4444338ee4628b937000"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT nuid, solution FROM applicants WHERE token=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "nuid",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "solution",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "b06672582c8c0fa21f1ae232658848beaf73267a7fd2fc95ff5b6ca909ab83b4"
+}
