@@ -31,7 +31,7 @@ services:
     depends_on:
       - db
     ports:
-      - 8000:8000
+      - 8080:8080
     environment:
       RUST_LOG: trace
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
